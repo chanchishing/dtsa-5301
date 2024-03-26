@@ -17,6 +17,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{r load library}
 library(tidyverse)
+library(lubridate)
 ```
 
 ```{r load-covid-19}
@@ -51,10 +52,22 @@ global_deaths <- global_deaths %>%
 	pivot_longer(col = -c('Province/State',
                               'Country/Region',Lat,Long),
                      names_to ="date",
-                     values_to="cases") %>%
+                     values_to="deaths") %>%
         select(-c(Lat,Long))	
 
 
+
+```
+
+```{r join global cases and deaths}
+
+global <- global_cases %>%
+     full_join(global_deaths) %>%
+     rename(Country_Region='Country/Region',
+            Province_State='Province/State') %>%
+     mutate(date=mdy(date))
+
+global <- global %>% filter(cases>0)
 
 ```
 
