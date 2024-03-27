@@ -137,13 +137,93 @@ US_by_state <- US %>%
 	select(Province_State, Country_Region,date,cases,deaths,deaths_per_mill,Population) %>%
 	ungroup()
 ```
+```{r calc summary of US_total by summing up US_by_state all by Country+_region} 
 
-## Including Plots
+US_totals <- US_by_state %>%
+	group_by(Country_Region,date) %>%
+	summarize(cases =sum(cases),deaths=sum(deaths),Population=sum(Population)) %>%
+	mutate(deaths_per_mill = deaths* 1000000/Population) %>%
+	select(Country_Region,date,cases,deaths,deaths_per_mill,Population) %>%
+	ungroup()
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r plot cases and deaths of US_totals}
+
+US_totals  %>%
+	filter(cases >0) %>%
+	ggplot(aes(x=date,y=cases)) +
+	geom_line(aes(color="cases")) +
+	geom_point(aes(color="cases")) +
+	geom_line(aes(y=deaths, color="deaths")) +
+	geom_point(aes(y=deaths, color="deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title="COVID19 in US",y=NULL)
+
+```
+
+```{r plot cases and deaths of New York using US_by_state}
+state <- "New York"
+
+US_by_state  %>%
+	filter(Province_State==state) %>%
+	filter(cases >0) %>%
+	ggplot(aes(x=date,y=cases)) +
+	geom_line(aes(color="cases")) +
+	geom_point(aes(color="cases")) +
+	geom_line(aes(y=deaths, color="deaths")) +
+	geom_point(aes(y=deaths, color="deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title=str_c("COVID19 in ",state),y=NULL)
+
+
+
+
+```
+
+```{r calculate new cases/deaths of each date and append the columns to US_by_state and US_totals }
+
+US_by_state <- US_by_state %>%
+	mutate(new_cases=cases-lag(cases),
+               new_deaths=deaths-lag(deaths))
+
+US_totals <- US_totals %>%
+	mutate(new_cases=cases-lag(cases),
+               new_deaths=deaths-lag(deaths))
+
+```
+```{r plot new cases and deaths of US_totals}
+US_totals  %>%
+	ggplot(aes(x=date,y=new_cases)) +
+	geom_line(aes(color="new_cases")) +
+	geom_point(aes(color="new_cases")) +
+	geom_line(aes(y=new_deaths, color="new_deaths")) +
+	geom_point(aes(y=new_deaths, color="new_deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title="New COVID19 cases per day in US",y=NULL)
+```
+
+```{r plot new cases and deaths select US state}
+
+state <- "New York"
+
+US_by_state  %>%
+	filter(Province_State==state) %>%
+	ggplot(aes(x=date,y=new_cases)) +
+	geom_line(aes(color="new_cases")) +
+	geom_point(aes(color="new_cases")) +
+	geom_line(aes(y=new_deaths, color="new_deaths")) +
+	geom_point(aes(y=new_deaths, color="new_deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title=str_c("New COVID19 cases per day in ",state),y=NULL)
+
+```
+
