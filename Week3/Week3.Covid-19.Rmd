@@ -227,3 +227,35 @@ US_by_state  %>%
 
 ```
 
+```{r find the 10 States of min and max death per thousand}
+S_state_totals <- US_by_state %>%
+	group_by(Province_State) %>%
+	summarize(deaths =max(deaths),cases =max(cases),population =max(Population),
+		  cases_per_thou = 1000*cases/population,
+		  deaths_per_thou = 1000*deaths/population) %>%
+	filter(cases >0, population>0)
+
+
+
+US_state_totals %>% 
+slice_min(deaths_per_thou,n=10) %>%
+select(deaths_per_thou,cases_per_thou,everything())
+
+
+
+US_state_totals %>% 
+slice_max(deaths_per_thou,n=10) %>%
+select(deaths_per_thou,cases_per_thou,everything())
+
+```
+```{r create a linear model of deaths_per_thou based on cases_per_thou of US State and plot result prediction against actuls}
+
+mod <- lm(deaths_per_thou ~ cases_per_thou, data=US_state_totals)
+
+US_tot_w_pred <- US_state_totals %>% mutate(pred=predict(mod))
+
+US_tot_w_pred %>% ggplot() +
+geom_point(aes(x=cases_per_thou,y=deaths_per_thou),color="blue")+
+geom_point(aes(x=cases_per_thou,y=pred),color="red")
+```
+
