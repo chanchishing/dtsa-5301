@@ -125,6 +125,18 @@ shooting_by_year  %>%
 	labs(title="test",y=NULL)
 ```
 
+
+```{r}
+mod  <- lm(count ~ year, data=shooting_by_year)
+
+shooting_by_year_pred <- shooting_by_year %>% mutate(pred=predict(mod))
+shooting_by_year_pred  %>%
+	ggplot(aes(x=year,y=count)) +
+        geom_point(aes(color="count")) +
+	geom_point(aes(x=year,y=pred,color="pred")) +
+	geom_line(aes(x=year,y=pred,color="pred"))
+```
+
 ```{r split into 2 linear model per2019 and post 2019, this model is likely an overfit model for future year not suitable for making future prediction}
 
 shooting_by_year_per2019 <- shooting_by_year %>%
