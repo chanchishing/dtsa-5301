@@ -1,6 +1,6 @@
 ---
 title: "NYPDShooting"
-author: "Shing"
+author: "Chan Chi Shing"
 date: "2024-03-28"
 output: html_document
 ---
@@ -36,11 +36,14 @@ nypd_raw<-read_csv(url_nypd_shooting)
       
 
 ```
+
 ```{r renive Geo-Map related column, as no intention to do analysis on that area}
 nypd_raw<-nypd_raw %>%
    select(-c(x_coord_cd:geocoded_column))
 
 ```
+
+
 
 ```{r there are duplicated values of incident_key but no rows are exactely the same, why ?}
 
@@ -59,7 +62,7 @@ nypd_raw %>%
 
 ```
 
-```{r sample example rows of duplicated incident_key, the 'duplicated' inclidnet_key is related to multiple perp for the same incident}
+```{r sample example rows of duplicated incident_key, the \'duplicated\' inclidnet_key is related to multiple perp for the same incident}
 
 nypd_raw %>%
   filter(incident_key==nth(dup_incident_key,10)$incident_key)
@@ -72,3 +75,83 @@ nypd_raw %>%
   filter(incident_key==nth(dup_incident_key,9356)$incident_key)
 
 ```
+``` {r find the number of shooting incident per day}
+shooting_by_date <- nypd_raw %>% 
+     distinct(incident_key,occur_date) %>%
+     group_by(occur_date) %>%
+     count() %>%
+     rename(count=n) %>%
+     mutate(wday=wday(occur_date,label = TRUE))
+```
+
+
+## Number of Shooting on Weekend vs Weekdays in NY
+Is it true that there is more shooting on weekend than weekday ?
+First get a summary of average number of shooting cases by date of week
+``` {r find average no of shooting incident by day of week }
+shooting_by_wday <-shooting_by_date %>%
+	group_by(wday) %>%
+	summarize(Mean = mean(count))
+
+```
+
+Visualize the difference of average on Sunday and Saturday (weekends) vs weekdays by bar plot.  The average number of shooting is higher on Weekends.
+```{r}
+shooting_by_wday %>%
+	ggplot(aes(x=wday, y=Mean)) +
+	geom_bar(stat="identity",fill="steelblue")+
+	labs(title="NYPD average no of shooting incident by day of week")
+
+
+```
+
+shooting_by_year <-shooting_by_date %>%
+        mutate(year=floor_date(occur_date,unit="year")) %>%
+	group_by(year) %>%
+	summarize(count = sum(count))
+```{r}
+shooting_by_year <-shooting_by_date %>%
+  mutate(year=floor_date(occur_date,unit="year")) %>%
+	group_by(year) %>%
+  summarize(count = sum(count))
+```
+
+
+```{r}
+shooting_by_year  %>%
+	ggplot(aes(x=year,y=count)) +
+	geom_point(aes(color="count")) +
+	geom_line(aes(color="count")) +
+	labs(title="test",y=NULL)
+```
+
+```{r split into 2 linear model per2019 and post 2019, this model is likely an overfit model for future year not suitable for making future prediction}
+
+shooting_by_year_per2019 <- shooting_by_year %>%
+                            filter(year<='2019-01-01')
+
+shooting_by_year_post2019 <- shooting_by_year %>%
+                            filter(year>'2019-01-01')
+
+mod_pre2019  <- lm(count ~ year, data=shooting_by_year_per2019)
+mod_post2019 <- lm(count ~ year, data=shooting_by_year_post2019) 
+
+shooting_by_year_pred_pre2019 <- shooting_by_year_per2019 %>% mutate(overfit_pred=predict(mod_pre2019))
+shooting_by_year_pred_post2019 <- shooting_by_year_post2019 %>% mutate(overfit_pred=predict(mod_post2019))
+
+shooting_by_year_pred <- bind_rows(shooting_by_year_pred_pre2019 ,shooting_by_year_pred_post2019)
+
+
+
+```
+
+
+```{r}
+shooting_by_year_pred  %>%
+	ggplot(aes(x=year,y=count)) +
+        geom_point(aes(color="count")) +
+	geom_point(aes(x=year,y=overfit_pred,color="overfit_pred")) +
+	geom_line(aes(x=year,y=overfit_pred,color="overfit_pred"))
+
+```
+
