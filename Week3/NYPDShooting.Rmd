@@ -1,48 +1,54 @@
 ---
-title: "NYPDShooting"
-author: "Chan Chi Shing"
+title: "NYPD Shooting DTSA-5301 Week 3 Assignment"
+author: "By a U of Colorado Boulder MSDS Student"
 date: "2024-03-28"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r load library}
-```
-
-
+## Load the R library
+Load the R library that will be used in this analysis
 ```{r load library}
 library(tidyverse)
 library(lubridate)
 
 ```
 
-```{r read data from URL}
-# Reference https://catalog.data.gov/dataset by following the documentation
-# the URL of the CSV is https://data.cityofnewyork.us/resource/833y-fsy8.csv?$limit=30000
-# by the time of wirting this code there is 27K+ rows, so $limit is set to 30000
+## Reading data from NYPD Shooting data web site
+Follow the exercise Reference URL https://catalog.data.gov/dataset and the documentations on that page,  the NYPD shooting CSV is located in https://data.cityofnewyork.us/resource/833y-fsy8.csv.  However, reading the URL directly only 1000 row is returned, which is not the number expected.  Further look into the data set documentation, we can specify the number of rows in the CSV by the $limit parameter, by the time of writing this code there is 27K+ rows, so $limit is set to 30000.  Save result to nypd_raw.
 
+
+```{r read data from URL}
 url_nypd_shooting<-"https://data.cityofnewyork.us/resource/833y-fsy8.csv?$limit=30000"
 
-nypd_raw<-read_csv(url_nypd_shooting)      
-      
+nypd_raw<-read_csv(url_nypd_shooting)
 
+summary(nypd_raw)
 ```
 
-```{r renive Geo-Map related column, as no intention to do analysis on that area}
+## Give up analysis on location data (not becuase of bias)
+When I first looked into the data set and there was location information in it, I was tempted to analyze if there is more shooting in poorer areas than affluent areas in NY.  This is certainly a **biased** study as I am opinionated there is more violent crime in poorer area.  However, on second thought, so long as I don't draw conclusion saying poor people are (or are not) violent base on the study, then it is not biased.  A single analysis of more (or less) shooting incident in poor area cannot proof there is a causation relation between poor and violent people, it is just an observation.
+
+However, I am not able to do the analysis as I am not a New Yorker, I do not know which Borough/Precinct is poor and which is affluent.  This is an example to show domain knowledge is important in the field of data science.
+
+
+## Remove Geo and location data
+Given the above, as I am not going to analyze the geo and location data in this data set.  The geo and location information columns are removed from nypd_raw to simplify the data set.
+
+```{r remove Geo-Map related column, as no intention to do analysis on that area}
 nypd_raw<-nypd_raw %>%
-   select(-c(x_coord_cd:geocoded_column))
-
+   select(-c(x_coord_cd:geocoded_column)) %>%
+   select(-c(boro:location_desc))
 ```
 
+
+## Check Duplicates
+Check if there is duplicated incident_key in data set, and it is found that there are appox 9K incident_key duplicated in the data sets (duplicate incident key is saved to dup_incident_keys).  However, there is no row in the data set that all columns are the same. Why ? 
 
 
 ```{r there are duplicated values of incident_key but no rows are exactely the same, why ?}
@@ -62,41 +68,70 @@ nypd_raw %>%
 
 ```
 
-```{r sample example rows of duplicated incident_key, the \'duplicated\' inclidnet_key is related to multiple perp for the same incident}
+## Why incident_key duplicated
+To answer myself, random sample from the "duplicated" incident_key (say the 10th, 101th and 9356th) is explored.  It is found the duplication is due to a single incident can have multiple perpetrators and victims.  
 
+Look up the data set documentation (https://data.cityofnewyork.us/api/views/833y-fsy8/files/e4e3d86c-348f-4a16-a17f-19480c089429?download=true&filename=NYPD_Shootings_Incident_Level_Data_Footnotes.pdf) and quoted from it as follow:
+
+>3. A shooting incident can have multiple victims involved and as a result duplicate
+>INCIDENT_KEY’s are produced. Each INCIDENT_KEY represents a victim but
+>similar duplicate keys are counted as one incident.
+
+This explains why there is duplication in incident_key.
+
+```{r sample example rows of duplicated incident_key, message=TRUE, paged.print=FALSE}
+
+#look at the 10th duplicated key
 nypd_raw %>%
-  filter(incident_key==nth(dup_incident_key,10)$incident_key)
+  filter(incident_key==nth(dup_incident_key,10)$incident_key) %>%
+  select(incident_key,c(perp_age_group:vic_race)) %>%
+  print(width=Inf)
 
+#look at the 101th duplicated key
 nypd_raw %>%
-  filter(incident_key==nth(dup_incident_key,101)$incident_key)
-
-
+  filter(incident_key==nth(dup_incident_key,101)$incident_key) %>%
+  select(incident_key,c(perp_age_group:vic_race)) %>%
+  print(width=Inf)
+  
+#look at the 9356th duplicated key
 nypd_raw %>%
-  filter(incident_key==nth(dup_incident_key,9356)$incident_key)
-
+  filter(incident_key==nth(dup_incident_key,9356)$incident_key) %>%
+  select(incident_key,c(perp_age_group:vic_race)) %>%
+  print(width=Inf)
 ```
-``` {r find the number of shooting incident per day}
+
+## Analysis on Perpetrator and Victims needs further clarification on record duplication
+Although we now know the reason for incident key duplication, analysis on Perpetrators/Victims still has problem.  For example, in the 10th duplicate incident key above (89514645), we could either interpret there are 6 individual victims (3 individuals of age 25-44 and 3 individuals of age 18-24) or 2 victims (1 individual of age 25-44 and 1 individual of age 18-24) due to the perpetrators is also duplicated. The data set documentation does not have any explanation of how to read his many to many relationship.
+
+So I also gave up to study Perpetrator and Victims (which will also lead to the **bias** consideration on race, gender, age).
+
+
+## Number of Shooting on Weekend vs Weekdays in NY
+I recall I had read somewhere that there is more shooting on weekends than week days, let's see if this is also true in New York.  This study is **biased** as I am pre-opinionated that there is more shooting on weekends, however the study can still be **fair** if I do not wrangle/model the data in favor of my pre-believe. 
+
+First group the data set to number of shooting per day and number of shooting on each day of week and save to shooting_by_date and shooting_by_wday respectively.
+``` {r find average no of shooting incident per day and by day of week }
+
 shooting_by_date <- nypd_raw %>% 
      distinct(incident_key,occur_date) %>%
      group_by(occur_date) %>%
      count() %>%
      rename(count=n) %>%
      mutate(wday=wday(occur_date,label = TRUE))
-```
 
-
-## Number of Shooting on Weekend vs Weekdays in NY
-Is it true that there is more shooting on weekend than weekday ?
-First get a summary of average number of shooting cases by date of week
-``` {r find average no of shooting incident by day of week }
 shooting_by_wday <-shooting_by_date %>%
 	group_by(wday) %>%
 	summarize(Mean = mean(count))
 
 ```
 
-Visualize the difference of average on Sunday and Saturday (weekends) vs weekdays by bar plot.  The average number of shooting is higher on Weekends.
-```{r}
+## Draw a bar chart to visualize average incident by day of week
+Visualize the average number of shooting incident on Sunday and Saturday (weekends) vs weekdays by bar plot.
+From the chart, it can be seen that the average number of shooting is higher on Weekends.  
+
+To further verify my presumption, we could count the number of weeks that average no number incident on weekends is larger than that of weekday to see how often this situation happens.  (For the sake that this is just an course assignment to meet the assignment rubric, I chose to stop drill further down.)
+
+```{r draw a bar chart to show number of shooting incidient by day of week}
 shooting_by_wday %>%
 	ggplot(aes(x=wday, y=Mean)) +
 	geom_bar(stat="identity",fill="steelblue")+
@@ -105,30 +140,41 @@ shooting_by_wday %>%
 
 ```
 
-shooting_by_year <-shooting_by_date %>%
-        mutate(year=floor_date(occur_date,unit="year")) %>%
-	group_by(year) %>%
-	summarize(count = sum(count))
+
+## Is there a trend in number of shooting incident in NY ?
+I would like to see if there is any trend on number of shooting.  So the shooting_by_date tibble is further group and sum to calculate the number of shooting by year (shooting_by_year).  Then it is plot as a line graph.
+
+From the graph, we can see that there is a general trend that the number of shooting incident is decreasing.  However, the number incident jump up drastically in 2020, 2021 and then going down again in 2022. 
+
+My first reaction to the spike is due to Covid-19 and this reaction is **biased**. The data set does not carry any information related to Covid-19, therefore  I shouldn't make my conclusion by simply seeing the spike of number of incident period overlaps with the Covid epidemic period. 
+
+The social-distancing requirement tighten and relax according to the severity of the epidemic, may be it is worth to study no. of shooting trend together with the period of different social-distancing order in force to see if there is any correlation.
+
+	
 ```{r}
 shooting_by_year <-shooting_by_date %>%
   mutate(year=floor_date(occur_date,unit="year")) %>%
 	group_by(year) %>%
   summarize(count = sum(count))
-```
 
 
-```{r}
 shooting_by_year  %>%
 	ggplot(aes(x=year,y=count)) +
 	geom_point(aes(color="count")) +
 	geom_line(aes(color="count")) +
-	labs(title="test",y=NULL)
+	labs(title="No of Shooting Incdient in NY by Year",y=NULL)
 ```
 
 
-```{r}
+## Create a linear model 
+A linear model is created to model the no. of shooting incident based on year of incident occurrence. The model could still capture the decreasing trend of number of incident over years (-ve year coefficient) despite there is a spike in 2020 and 2021.  It would be nice if we could create the model again when the 2023 data become available to see if the decreasing trend continues.
+
+```{r create a linear model on no of shooting based on year and plot a graph}
 mod  <- lm(count ~ year, data=shooting_by_year)
 
+print(mod)
+
+#plot prediction of  linear model overlay with actual data
 shooting_by_year_pred <- shooting_by_year %>% mutate(pred=predict(mod))
 shooting_by_year_pred  %>%
 	ggplot(aes(x=year,y=count)) +
@@ -137,33 +183,4 @@ shooting_by_year_pred  %>%
 	geom_line(aes(x=year,y=pred,color="pred"))
 ```
 
-```{r split into 2 linear model per2019 and post 2019, this model is likely an overfit model for future year not suitable for making future prediction}
-
-shooting_by_year_per2019 <- shooting_by_year %>%
-                            filter(year<='2019-01-01')
-
-shooting_by_year_post2019 <- shooting_by_year %>%
-                            filter(year>'2019-01-01')
-
-mod_pre2019  <- lm(count ~ year, data=shooting_by_year_per2019)
-mod_post2019 <- lm(count ~ year, data=shooting_by_year_post2019) 
-
-shooting_by_year_pred_pre2019 <- shooting_by_year_per2019 %>% mutate(overfit_pred=predict(mod_pre2019))
-shooting_by_year_pred_post2019 <- shooting_by_year_post2019 %>% mutate(overfit_pred=predict(mod_post2019))
-
-shooting_by_year_pred <- bind_rows(shooting_by_year_pred_pre2019 ,shooting_by_year_pred_post2019)
-
-
-
-```
-
-
-```{r}
-shooting_by_year_pred  %>%
-	ggplot(aes(x=year,y=count)) +
-        geom_point(aes(color="count")) +
-	geom_point(aes(x=year,y=overfit_pred,color="overfit_pred")) +
-	geom_line(aes(x=year,y=overfit_pred,color="overfit_pred"))
-
-```
 
