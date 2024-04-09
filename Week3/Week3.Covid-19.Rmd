@@ -149,7 +149,10 @@ US_totals <- US_by_state %>%
 ```
 
 ```{r plot cases and deaths of US_totals}
+```
 
+
+```{r plot cases and deaths of US_totals}
 US_totals  %>%
 	filter(cases >0) %>%
 	ggplot(aes(x=date,y=cases)) +
@@ -161,7 +164,10 @@ US_totals  %>%
 	theme(legend.position="bottom",
 	      axis.text.x=element_text(angle=90))+
 	labs(title="COVID19 in US",y=NULL)
+```
 
+
+```{r plot cases and deaths of US_totals}
 ```
 
 ```{r plot cases and deaths of New York using US_by_state}
@@ -228,7 +234,7 @@ US_by_state  %>%
 ```
 
 ```{r find the 10 States of min and max death per thousand}
-S_state_totals <- US_by_state %>%
+US_state_totals <- US_by_state %>%
 	group_by(Province_State) %>%
 	summarize(deaths =max(deaths),cases =max(cases),population =max(Population),
 		  cases_per_thou = 1000*cases/population,
@@ -248,13 +254,83 @@ slice_max(deaths_per_thou,n=10) %>%
 select(deaths_per_thou,cases_per_thou,everything())
 
 ```
-```{r create a linear model of deaths_per_thou based on cases_per_thou of US State and plot result prediction against actuls}
+```{r create a linear model of deaths_per_thou based on cases_per_thou of US State and plot result prediction against actuals}
 
 mod <- lm(deaths_per_thou ~ cases_per_thou, data=US_state_totals)
 
 US_tot_w_pred <- US_state_totals %>% mutate(pred=predict(mod))
 
 US_tot_w_pred %>% ggplot() +
+geom_point(aes(x=cases_per_thou,y=deaths_per_thou),color="blue")+
+geom_point(aes(x=cases_per_thou,y=pred),color="red")
+```
+### My exploration of Hong Kong Data
+
+```{R}
+Hong_Kong_cases <-global %>%
+     filter(Combined_Key=='Hong Kong ,China') %>%
+     select(c(Combined_Key, date, cases,deaths,Population))
+```
+
+```{r}
+Hong_Kong_cases  %>%
+	filter(cases >0) %>%
+	filter(deaths >0) %>%
+	ggplot(aes(x=date,y=cases)) +
+	geom_line(aes(color="cases")) +
+	geom_point(aes(color="cases")) +
+	geom_line(aes(y=deaths, color="deaths")) +
+	geom_point(aes(y=deaths, color="deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title="COVID19 in Hong Kong",y=NULL)
+```
+```{r calc new cases and death per day}
+Hong_Kong_cases <- Hong_Kong_cases %>%
+	mutate(new_cases=cases-lag(cases),
+               new_deaths=deaths-lag(deaths))
+
+Hong_Kong_cases <- Hong_Kong_cases %>%
+	mutate(new_cases=cases-lag(cases))
+```
+
+```{r}
+Hong_Kong_cases  %>%
+	ggplot(aes(x=date,y=new_cases)) +
+	geom_line(aes(color="new_cases")) +
+	geom_point(aes(color="new_cases")) +
+	geom_line(aes(y=new_deaths, color="new_deaths")) +
+	geom_point(aes(y=new_deaths, color="new_deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title="New COVID19 cases per day in Hong Kong",y=NULL)
+
+```
+
+```{r}
+HK_mod <- lm(deaths ~ cases, data=Hong_Kong_cases)
+
+Hong_Kong_cases_w_pred <- Hong_Kong_cases %>% mutate(pred=predict(HK_mod))
+
+Hong_Kong_cases_w_pred %>% ggplot() +
+geom_point(aes(x=cases,y=deaths),color="blue")+
+geom_point(aes(x=cases,y=pred),color="red")
+
+```
+```{r}
+Hong_Kong_cases <- Hong_Kong_cases %>%
+                  mutate(cases_per_thou = 1000*cases/Population,
+			 deaths_per_thou = 1000*deaths/Population)
+
+
+
+HK_mod2 <- lm(deaths_per_thou ~ cases_per_thou, data=Hong_Kong_cases)
+
+Hong_Kong_cases_w_pred2 <- Hong_Kong_cases %>% mutate(pred=predict(HK_mod2))
+
+Hong_Kong_cases_w_pred2 %>% ggplot() +
 geom_point(aes(x=cases_per_thou,y=deaths_per_thou),color="blue")+
 geom_point(aes(x=cases_per_thou,y=pred),color="red")
 ```
