@@ -1,24 +1,32 @@
 ---
 title: "covid-19"
-output: html_document
-date: "2024-03-26"
+output:
+  pdf_document: default
+  html_document: default
+author: "Shing"  
+date: "2024-04-10"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# PART A - Repeat Instructor's Code
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Part A is repeat Dr Wall's code that she presented in the video lectures.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Part B is my work to further look into covid cases in Hong Kong.
 
+##Load libraries
+Load libraries that will be use in this analysis
 
 ```{r load library}
 library(tidyverse)
 library(lubridate)
 ```
+
+## Load data
+Load csv data from John Hopkins github site
 
 ```{r load-covid-19}
 url_in<-"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
@@ -36,6 +44,10 @@ US_cases<-read_csv(urls[3])
 US_deaths<-read_csv(urls[4])
 
 ```
+
+## Pivot global table
+
+Pivot table by date on  no. of cases and no. of deaths for global tables
 
 ```{r pivot global}
 global_cases <- global_cases %>%
@@ -59,6 +71,10 @@ global_deaths <- global_deaths %>%
 
 ```
 
+
+## Joint no. of cases and no. of deaths for global
+
+Filter out zero cases after table join
 ```{r join global cases and deaths}
 
 global <- global_cases %>%
@@ -70,6 +86,11 @@ global <- global_cases %>%
 global <- global %>% filter(cases>0)
 
 ```
+
+
+## Pivot US table
+
+Pivot table by date on  no. of cases and no. of deaths for US tables
 
 ```{r pivot US}
 US_cases <-	US_cases %>%
@@ -94,6 +115,9 @@ US_deaths <-	US_deaths %>%
 
 ```
 
+
+
+## Joint no. of cases and no. of deaths for US
 ```{r join US cases and deaths}
 US <- US_cases %>%
   full_join(US_deaths)
@@ -101,6 +125,9 @@ US <- US_cases %>%
 
 ```
 
+
+## Create column Combined_Key in global table
+Create column Combined_Key based on Province_State and Country_Region in global table to mimic the table structure of US table
 ```{r add Combined_Key column to global}
 
 global <- global %>%
@@ -112,6 +139,10 @@ global <- global %>%
 
 ```
 
+
+## Load Population data
+There is no pupulation data in global table, load population data from John Hopkin's git hub site for further analysis
+
 ```{r read in population from uid lookup}
 
 uid_lookup_url <-"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/UID_ISO_FIPS_LookUp_Table.csv"
@@ -119,6 +150,8 @@ uid_lookup_url <-"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mast
 uid<-read_csv(uid_lookup_url) %>%
 	select(-c(Lat, Long_,Combined_Key,code3,iso2,iso3,Admin2))
 ```
+## Joint Population data to global table
+Join the population data by uid to the global table, remove UID, FIPS column from global table after join operation
 
 ```{r join population from uid lookup to global}
 
@@ -129,6 +162,9 @@ global <-global %>%
 
 ```
 
+
+## Calculate death per millon by state in US table
+Calculate death per millon by date by state save result to US_by_state
 ```{r calc US deaths per mill by state per date}
 US_by_state <- US %>%
 	group_by(Province_State,Country_Region,date) %>%
@@ -137,6 +173,10 @@ US_by_state <- US %>%
 	select(Province_State, Country_Region,date,cases,deaths,deaths_per_mill,Population) %>%
 	ungroup()
 ```
+
+## Calculate death per millon of US (whole country)
+Calculate death per millon by date of US (as a whole country) by summing up total for all US States save result to US_total
+
 ```{r calc summary of US_total by summing up US_by_state all by Country+_region} 
 
 US_totals <- US_by_state %>%
@@ -148,9 +188,8 @@ US_totals <- US_by_state %>%
 
 ```
 
-```{r plot cases and deaths of US_totals}
-```
-
+## Plot cases and deaths of US
+Plot cases and deaths from US_totals
 
 ```{r plot cases and deaths of US_totals}
 US_totals  %>%
@@ -167,8 +206,8 @@ US_totals  %>%
 ```
 
 
-```{r plot cases and deaths of US_totals}
-```
+## Plot cases and deaths of New York State
+Plot cases and deaths of New York State from US_by_state
 
 ```{r plot cases and deaths of New York using US_by_state}
 state <- "New York"
@@ -190,6 +229,10 @@ US_by_state  %>%
 
 
 ```
+
+
+## Calculate new case and new deaths per day for States of US and US as a whole 
+Calculate new case and new deaths per day for States of US and US as a whole using the lag() function, save result as new columns in US_by_state and US_totals
 
 ```{r calculate new cases/deaths of each date and append the columns to US_by_state and US_totals }
 
