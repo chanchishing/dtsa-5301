@@ -11,13 +11,15 @@ date: "2024-04-10"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# PART A - Repeat Instructor's Code
+# Week 3 Lecture - John Hopkin's Covid-19 data set and Week 5 - final assignment
+
+## PART A - Repeat Instructor's Code
 
 Part A is repeat Dr Wall's code that she presented in the video lectures.
 
-Part B is my work to further look into covid cases in Hong Kong.
+Part B is my work to further look into covid cases in Hong Kong (you can go to Part B directly for the final assignment of my own exploration).
 
-##Load libraries
+## Load libraries
 Load libraries that will be use in this analysis
 
 ```{r load library}
@@ -245,6 +247,8 @@ US_totals <- US_totals %>%
                new_deaths=deaths-lag(deaths))
 
 ```
+
+## Plot new cases and deaths per day of US (country total)
 ```{r plot new cases and deaths of US_totals}
 US_totals  %>%
 	ggplot(aes(x=date,y=new_cases)) +
@@ -257,6 +261,8 @@ US_totals  %>%
 	      axis.text.x=element_text(angle=90))+
 	labs(title="New COVID19 cases per day in US",y=NULL)
 ```
+
+## Plot new cases and deaths per day of New York
 
 ```{r plot new cases and deaths select US state}
 
@@ -275,6 +281,12 @@ US_by_state  %>%
 	labs(title=str_c("New COVID19 cases per day in ",state),y=NULL)
 
 ```
+
+
+## Find the 10 States of min and max death per thousand
+Find the 10 States of min and max death per thousand (two steps) 
+1)Calculate min, max, case per thousand, deaths per thousand group by state
+2)Use the slice_min(),slice_max() to find the top 10 max and min deaths per thousands
 
 ```{r find the 10 States of min and max death per thousand}
 US_state_totals <- US_by_state %>%
@@ -297,7 +309,11 @@ slice_max(deaths_per_thou,n=10) %>%
 select(deaths_per_thou,cases_per_thou,everything())
 
 ```
-```{r create a linear model of deaths_per_thou based on cases_per_thou of US State and plot result prediction against actuals}
+
+
+## Create a model
+Create a linear model of deaths_per_thou based on cases_per_thou of US State and plot result prediction against actual
+```{r create a linear model of deaths_per_thou based on cases_per_thou of US State and plot result prediction against actual}
 
 mod <- lm(deaths_per_thou ~ cases_per_thou, data=US_state_totals)
 
@@ -307,18 +323,32 @@ US_tot_w_pred %>% ggplot() +
 geom_point(aes(x=cases_per_thou,y=deaths_per_thou),color="blue")+
 geom_point(aes(x=cases_per_thou,y=pred),color="red")
 ```
-### My exploration of Hong Kong Data
 
-```{R}
+
+## PART B - My exploration of Hong Kong Data for the final assignment (final assignment)
+I would like to explore the  data of Hong Kong for the  final assignment.
+Data has already been read and wrangled into global table in Part A, filter out data of Hong Kong and save in Hong_Kong_cases
+
+```{R filter out data of Hong Kong from global and save in Hong_Kong_cases}
 Hong_Kong_cases <-global %>%
      filter(Combined_Key=='Hong Kong ,China') %>%
      select(c(Combined_Key, date, cases,deaths,Population))
 ```
 
-```{r}
+
+## Plot no. of cases and deaths in Hong Kong
+When compare Hong Kong with NY (in Part A), It is observed there is only a single surge in no. of cases in 2020 Spring and the increase in 2021 and 2022 Spring is more gentle.  For Hong Kong, the 1st surge in 2020 Spring is not as sharp as NY, however, there is a sharp increase in 2022 Spring, which is not the case in NY.  It is worth to look into it why there is the difference, is it due to difference in social distancing order or how the covid vaccine is distributed.
+
+Looking back in time, it seems NY's has a better strategy to cope with the virus, as there is no sharp rise in case and depth in 2022, "normal living" can be resumed earlier in NY.
+
+
+*** BIAS WARNING ***
+
+The above conclusion that NY's has a better strategy may be a ***biased*** view as NY data and Hong Kong data is collected by their respective health agency, which they may have different classification standard/mechanism on whether a case and cause of death is Covid case or not.  Therefore, concluding a place's strategy is better than another is ***biased*** by just based on how no. of case is increased in these two places.
+
+```{R plot no. of cases and deaths in Hong Kong, warning=FALSE}
 Hong_Kong_cases  %>%
 	filter(cases >0) %>%
-	filter(deaths >0) %>%
 	ggplot(aes(x=date,y=cases)) +
 	geom_line(aes(color="cases")) +
 	geom_point(aes(color="cases")) +
@@ -328,17 +358,34 @@ Hong_Kong_cases  %>%
 	theme(legend.position="bottom",
 	      axis.text.x=element_text(angle=90))+
 	labs(title="COVID19 in Hong Kong",y=NULL)
+
+state <- "New York"
+
+US_by_state  %>%
+	filter(Province_State==state) %>%
+	filter(cases >0) %>%
+	ggplot(aes(x=date,y=cases)) +
+	geom_line(aes(color="cases")) +
+	geom_point(aes(color="cases")) +
+	geom_line(aes(y=deaths, color="deaths")) +
+	geom_point(aes(y=deaths, color="deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title=str_c("Repeat Graph of Part A - COVID19 in ",state),y=NULL)
+
 ```
-```{r calc new cases and death per day}
+
+## Calculate new case/death per day and plot graph of Hong Kong
+Calculate new case/death pert day and plot new case/death per day of Hong Kong
+
+Comparing to the same graph of NY in Part A, there is more variation in no. of deaths in NY after mid-2022, there is more days with zero death in NY after mid-2022.  Hong Kong can only have zero death day in late 2022 but the drop in no. of death is more consistent (less variation) after 2023, while the death per day in NY remain vary a lot after 2023.
+
+```{R calc new cases and death per day, warning=FALSE}
 Hong_Kong_cases <- Hong_Kong_cases %>%
 	mutate(new_cases=cases-lag(cases),
-               new_deaths=deaths-lag(deaths))
+        new_deaths=deaths-lag(deaths))
 
-Hong_Kong_cases <- Hong_Kong_cases %>%
-	mutate(new_cases=cases-lag(cases))
-```
-
-```{r}
 Hong_Kong_cases  %>%
 	ggplot(aes(x=date,y=new_cases)) +
 	geom_line(aes(color="new_cases")) +
@@ -350,19 +397,28 @@ Hong_Kong_cases  %>%
 	      axis.text.x=element_text(angle=90))+
 	labs(title="New COVID19 cases per day in Hong Kong",y=NULL)
 
+state <- "New York"
+
+US_by_state  %>%
+	filter(Province_State==state) %>%
+	ggplot(aes(x=date,y=new_cases)) +
+	geom_line(aes(color="new_cases")) +
+	geom_point(aes(color="new_cases")) +
+	geom_line(aes(y=new_deaths, color="new_deaths")) +
+	geom_point(aes(y=new_deaths, color="new_deaths")) +
+	scale_y_log10()+
+	theme(legend.position="bottom",
+	      axis.text.x=element_text(angle=90))+
+	labs(title=str_c("Repeat Part A - New COVID19 cases per day in ",state),y=NULL)
+
 ```
 
-```{r}
-HK_mod <- lm(deaths ~ cases, data=Hong_Kong_cases)
 
-Hong_Kong_cases_w_pred <- Hong_Kong_cases %>% mutate(pred=predict(HK_mod))
+## Create a simple model for deaths per thousand based on case per thousand of Hong Kong
+Calculate cases per thousand and deaths per thousand in Hong Kong and create a linear model of it then plot the model against actual data.
 
-Hong_Kong_cases_w_pred %>% ggplot() +
-geom_point(aes(x=cases,y=deaths),color="blue")+
-geom_point(aes(x=cases,y=pred),color="red")
 
-```
-```{r}
+```{R create a model}
 Hong_Kong_cases <- Hong_Kong_cases %>%
                   mutate(cases_per_thou = 1000*cases/Population,
 			 deaths_per_thou = 1000*deaths/Population)
@@ -375,6 +431,24 @@ Hong_Kong_cases_w_pred2 <- Hong_Kong_cases %>% mutate(pred=predict(HK_mod2))
 
 Hong_Kong_cases_w_pred2 %>% ggplot() +
 geom_point(aes(x=cases_per_thou,y=deaths_per_thou),color="blue")+
-geom_point(aes(x=cases_per_thou,y=pred),color="red")
+geom_point(aes(x=cases_per_thou,y=pred),color="red") +
+labs(title="Linear model of deaths per thousand against cases per thousand of Hong Kong",y=NULL)
+
+```
+
+```{r}
+
+China_cases <-global %>%
+     filter(Country_Region=='China') %>%
+     select(c(Province_State,Combined_Key, date, cases,deaths,Population))
+
+China_totals <- China_cases %>%
+	group_by(Province_State) %>%
+	summarize(
+		  cases_per_thou = 1000*cases/Population,
+		  deaths_per_thou = 1000*deaths/Population)
+  #%>% filter(cases >0, Population>0)
+
+
 ```
 
