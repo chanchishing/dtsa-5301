@@ -414,41 +414,48 @@ US_by_state  %>%
 ```
 
 
-## Create a simple model for deaths per thousand based on case per thousand of Hong Kong
-Calculate cases per thousand and deaths per thousand in Hong Kong and create a linear model of it then plot the model against actual data.
 
 
-```{R create a model}
-Hong_Kong_cases <- Hong_Kong_cases %>%
-                  mutate(cases_per_thou = 1000*cases/Population,
-			 deaths_per_thou = 1000*deaths/Population)
+## Create a simple model for deaths per thousand based on case per thousand of United Kingdom
 
+*Note*: The Provience/State of UK in the global dataset is not the counties of the "main" UK (England,Ireland,Scotland,Wales) The Provience/State are colonies of UK that may far away from the British Isles geographically.
 
+Steps
 
-HK_mod2 <- lm(deaths_per_thou ~ cases_per_thou, data=Hong_Kong_cases)
+1) Extract UK cases from table globa sve in UK_cases
 
-Hong_Kong_cases_w_pred2 <- Hong_Kong_cases %>% mutate(pred=predict(HK_mod2))
+2) Get total no of case and deaths from the max of UK_cases (as the count in dataset is cumulative) save to UK_total group by 
+3) calc cases per thousand and deaths per thousand
 
-Hong_Kong_cases_w_pred2 %>% ggplot() +
-geom_point(aes(x=cases_per_thou,y=deaths_per_thou),color="blue")+
-geom_point(aes(x=cases_per_thou,y=pred),color="red") +
-labs(title="Linear model of deaths per thousand against cases per thousand of Hong Kong",y=NULL)
+4) create linear model of deaths per thoursand based on case per thousand using lm() of R
 
-```
+5) predit deaths per thoursand using the linear model, save predition to UK_cases_w_pred
 
+6) plot predict value overlay with actual data
 ```{r}
 
-China_cases <-global %>%
-     filter(Country_Region=='China') %>%
+# Extract UK cases from table globa sve in UK_cases
+UK_cases <-global %>%
+     filter(Country_Region=='United Kingdom') %>%
      select(c(Province_State,Combined_Key, date, cases,deaths,Population))
 
-China_totals <- China_cases %>%
+# Get total no of case and deaths from the max of UK_cases (as the count in dataset is cumulative) save to UK_total group by # Calc cases per thousand and deaths per thousand
+UK_totals <- UK_cases %>%
 	group_by(Province_State) %>%
-	summarize(
-		  cases_per_thou = 1000*cases/Population,
-		  deaths_per_thou = 1000*deaths/Population)
-  #%>% filter(cases >0, Population>0)
+  summarize(deaths =max(deaths),cases =max(cases),population =max(Population),
+		  cases_per_thou = 1000*cases/population,
+		  deaths_per_thou = 1000*deaths/population)
 
+# Create linear model of deaths per thoursand based on case per thousand using lm() of R
+UK_mod <- lm(deaths_per_thou ~ cases_per_thou, data=UK_totals)
 
+# Predit deaths per thoursand using the linear model, save predition to UK_cases_w_pred
+UK_cases_w_pred <- UK_totals %>% mutate(pred=predict(UK_mod))
+
+# Plot predict value overlay with actual data
+UK_cases_w_pred %>% ggplot() +
+geom_point(aes(x=cases_per_thou,y=deaths_per_thou),color="blue")+
+geom_point(aes(x=cases_per_thou,y=pred),color="red") +
+labs(title="Linear model of deaths per thousand against cases per thousand of United Kingdom",y=NULL)
 ```
 
